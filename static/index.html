@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hadith Explorer — مكتبة الحديث</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink:        #0b1120;
+      --ink-panel:  #111827;
+      --ink-card:   #1a2235;
+      --gold:       #c8a84b;
+      --gold-light: #e2c97e;
+      --gold-dim:   #8a7030;
+      --gold-glow:  rgba(200,168,75,0.18);
+      --teal:       #2a9d8f;
+      --teal-dim:   #1d6e64;
+      --cream:      #f0e8d5;
+      --cream-dim:  #b8aa92;
+      --muted:      #6b7a94;
+      --border:     rgba(200,168,75,0.15);
+      --border-hi:  rgba(200,168,75,0.45);
+      --radius:     12px;
+      --ease-out:   cubic-bezier(0.25, 1, 0.5, 1);
+      --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'Lato', sans-serif;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Islamic geometric tiling background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c8a84b' stroke-width='0.6'%3E%3Cpolygon points='40,4 47,16 61,16 50,25 54,39 40,31 26,39 30,25 19,16 33,16'/%3E%3Cpolygon points='40,41 47,53 61,53 50,62 54,76 40,68 26,76 30,62 19,53 33,53'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 80px 80px;
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 20%, rgba(42,157,143,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 85% 80%, rgba(200,168,75,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+    /* ── Layout ── */
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 290px 1fr;
+      grid-template-areas: "header header" "sidebar main";
+      min-height: 100vh;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    .header {
+      grid-area: header;
+      background: rgba(11,17,32,0.93);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 66px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--teal) 60%, var(--gold) 80%, transparent 100%);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-right: auto;
+      text-decoration: none;
+    }
+    .logo-emblem { width: 38px; height: 38px; flex-shrink: 0; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1.15; }
+    .logo-en {
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cream);
+    }
+    .logo-ar {
+      font-family: 'Noto Naskh Arabic', serif;
+      font-size: 0.88rem;
+      color: var(--gold);
+      direction: rtl;
+    }
+
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      padding: 0 4px 0 18px;
+      height: 40px;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .search-wrap:focus-within {
+      border-color: var(--gold);
+      background: rgba(255,255,255,0.07);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+    .search-wrap input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--cream);
+      font-size: 0.85rem;
+      font-family: 'Lato', sans-serif;
+      width: 210px;
+    }
+    .search-wrap input::placeholder { color: var(--muted); font-style: italic; }
+    .search-wrap button {
+      background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+      border: none;
+      border-radius: 40px;
+      height: 30px;
+      padding: 0 16px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .search-wrap button:hover { opacity: 0.85; transform: scale(1.04); }
+
+    .lang-pill {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      font-family: 'Lato', sans-serif;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .lang-pill option { background: var(--ink-panel); }
+    .lang-pill:hover, .lang-pill:focus { border-color: var(--gold); color: var(--cream); }
+
+    .menu-btn {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      padding: 4px 12px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .menu-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      grid-area: sidebar;
+      background: rgba(17,24,39,0.96);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      height: calc(100vh - 66px);
+      position: sticky;
+      top: 66px;
+      padding: 24px 0 48px;
+    }
+    .sidebar-section { margin-bottom: 30px; }
+    .sidebar-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      padding: 0 20px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 20px;
+      cursor: pointer;
+    }
+    .tog-track {
+      width: 40px; height: 22px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      position: relative;
+      transition: background 0.3s, border-color 0.3s;
+      flex-shrink: 0;
+    }
+    .tog-track.on { background: var(--teal-dim); border-color: var(--teal); }
+    .tog-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      background: var(--cream-dim);
+      border-radius: 50%;
+      transition: left 0.3s var(--ease-spring), background 0.3s;
+    }
+    .tog-track.on .tog-thumb { left: 20px; background: var(--cream); }
+    .tog-label { font-size: 0.78rem; color: var(--cream-dim); }
+
+    .book-list, .topic-list { list-style: none; }
+    .book-item, .topic-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .book-item:hover, .topic-item:hover { color: var(--cream); background: rgba(200,168,75,0.05); }
+    .book-item.active, .topic-item.active {
+      color: var(--gold-light);
+      border-left-color: var(--gold);
+      background: rgba(200,168,75,0.08);
+    }
+    .book-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--gold-dim);
+      flex-shrink: 0;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .book-item.active .book-dot, .book-item:hover .book-dot {
+      background: var(--gold);
+      box-shadow: 0 0 7px var(--gold);
+    }
+    .topic-item { font-size: 0.77rem; padding: 5px 20px 5px 30px; }
+    .topic-item::before { content: '◈'; color: var(--gold-dim); font-size: 0.55rem; flex-shrink: 0; }
+    .topic-item.active::before { color: var(--gold); }
+
+    /* ── Main ── */
+    .main { grid-area: main; padding: 32px 36px; overflow-y: auto; height: calc(100vh - 66px); }
+    .main-hdr { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+    .main-title {
+      font-family: 'Amiri', serif;
+      font-size: 1.9rem;
+      font-weight: 400;
+      color: var(--cream);
+    }
+    .result-count {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(200,168,75,0.07);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 12px;
+    }
+    .result-count.hidden, .clear-btn.hidden { display: none; }
+    .clear-btn {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid rgba(200,168,75,0.25);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: 'Lato', sans-serif;
+      transition: all 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .divider {
+      width: 56px; height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--teal));
+      border-radius: 2px;
+      margin-bottom: 28px;
+    }
+
+    /* ── Cards ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .state-msg {
+      grid-column: 1 / -1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; padding: 80px 40px;
+      color: var(--muted); font-size: 0.9rem; text-align: center;
+    }
+    .state-msg .big {
+      font-family: 'Noto Naskh Arabic', serif;
+      font-size: 2.2rem; color: var(--gold-dim); opacity: 0.55; display: block;
+    }
+    .spinner {
+      width: 30px; height: 30px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hadith-card {
+      background: var(--ink-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      animation: cardIn 0.38s var(--ease-out) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hadith-card:nth-child(1)  { animation-delay: 0.03s; }
+    .hadith-card:nth-child(2)  { animation-delay: 0.07s; }
+    .hadith-card:nth-child(3)  { animation-delay: 0.11s; }
+    .hadith-card:nth-child(4)  { animation-delay: 0.15s; }
+    .hadith-card:nth-child(5)  { animation-delay: 0.19s; }
+    .hadith-card:nth-child(6)  { animation-delay: 0.23s; }
+    .hadith-card:nth-child(n+7){ animation-delay: 0.27s; }
+
+    /* top teal accent line */
+    .hadith-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--teal), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .hadith-card:hover {
+      border-color: rgba(200,168,75,0.38);
+      box-shadow: 0 8px 36px rgba(0,0,0,0.55), 0 0 0 1px rgba(200,168,75,0.1);
+    }
+    .hadith-card:hover::after { opacity: 0.7; }
+
+    /* gold corner mark */
+    .hadith-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 0; height: 0;
+      border-style: solid;
+      border-width: 28px 28px 0 0;
+      border-color: rgba(200,168,75,0.12) transparent transparent transparent;
+      opacity: 0;
+      transition: opacity 0.3s;
+      border-radius: var(--radius) 0 0 0;
+    }
+    .hadith-card:hover::before { opacity: 1; }
+
+    .card-book {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.58rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 10px;
+    }
+    .card-book::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+    .card-arabic {
+      font-family: 'Noto Naskh Arabic', serif;
+      font-size: 1.12rem;
+      line-height: 2;
+      color: var(--cream);
+      text-align: right;
+      direction: rtl;
+      border-right: 2px solid var(--gold-dim);
+      padding-right: 12px;
+      margin-bottom: 12px;
+      opacity: 0.9;
+    }
+    .card-text {
+      font-size: 0.875rem;
+      line-height: 1.75;
+      color: var(--cream-dim);
+      margin-bottom: 16px;
+    }
+    .card-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .grade-pill {
+      font-size: 0.58rem; font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+    }
+    .grade-pill.sahih { background: rgba(42,157,143,0.12); color: #5dd3c4; border-color: rgba(42,157,143,0.28); }
+    .grade-pill.hasan { background: rgba(93,155,222,0.12); color: #82bcf7; border-color: rgba(93,155,222,0.28); }
+    .grade-pill.daif  { background: rgba(220,80,80,0.1);  color: #e08080; border-color: rgba(220,80,80,0.22); }
+    .grade-pill.other { background: rgba(200,168,75,0.08); color: var(--gold-dim); border-color: var(--border); }
+    .card-search-ctx {
+      width: 100%; margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 0.65rem; color: var(--muted);
+    }
+
+    /* ── Tooltip ── */
+    #tip {
+      position: fixed;
+      width: 284px;
+      background: rgba(10,15,28,0.98);
+      border: 1px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.92), 0 0 0 1px rgba(200,168,75,0.06);
+      z-index: 9999;
+      pointer-events: auto;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px) scale(0.97);
+      transition: opacity 0.2s ease, transform 0.22s var(--ease-out), visibility 0.2s;
+      overflow-y: auto;
+      max-height: 360px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold-dim) transparent;
+    }
+    #tip.show { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+    #tip::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+    }
+    #tip.below::before { top: -12px; border-bottom-color: var(--gold); }
+    #tip.above::before { bottom: -12px; border-top-color: var(--gold); }
+
+    .tip-heading {
+      font-size: 0.58rem; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--gold-dim); margin-bottom: 14px;
+    }
+    .chain { display: flex; align-items: center; margin-bottom: 16px; }
+    .chain-node {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+    }
+    .chain-node.lit { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 8px var(--gold); }
+    .chain-link { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+    .chain-link.lit { background: linear-gradient(90deg, var(--gold), var(--teal)); }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .bar-label { font-size: 0.62rem; color: var(--muted); width: 58px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+    .bar-track { flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--teal), var(--gold)); }
+    .bar-score { font-size: 0.62rem; color: var(--gold-dim); width: 24px; text-align: right; flex-shrink: 0; }
+    .tip-src { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.65rem; color: var(--muted); }
+    .tip-src strong { color: var(--gold-dim); }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) {
+      .shell { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+      .sidebar {
+        position: fixed;
+        left: 0; top: 66px;
+        width: 280px; height: calc(100vh - 66px);
+        z-index: 150;
+        transform: translateX(-100%);
+        transition: transform 0.3s var(--ease-out), box-shadow 0.3s;
+      }
+      .sidebar.open { transform: translateX(0); box-shadow: 8px 0 40px rgba(0,0,0,0.7); }
+      .menu-btn { display: block; }
+      .search-wrap input { width: 140px; }
+      .main { padding: 20px 16px; height: auto; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .header { padding: 0 14px; gap: 10px; }
+      .logo-ar { display: none; }
+      .search-wrap input { width: 100px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hadith-card { animation: none; }
+      #tip { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="tip"></div>
+
+<div class="shell">
+
+  <header class="header">
+    <a class="logo" href="#">
+      <svg class="logo-emblem" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="19" stroke="#c8a84b" stroke-width="0.7" opacity="0.35"/>
+        <polygon points="20,3 22.5,14.5 32,8 25.5,17.5 37,20 25.5,22.5 32,32 22.5,25.5 20,37 17.5,25.5 8,32 14.5,22.5 3,20 14.5,17.5 8,8 17.5,14.5"
+          fill="none" stroke="#c8a84b" stroke-width="0.75" opacity="0.9"/>
+        <polygon points="20,11 23.8,16.2 29,20 23.8,23.8 20,29 16.2,23.8 11,20 16.2,16.2"
+          fill="rgba(200,168,75,0.1)" stroke="#c8a84b" stroke-width="0.5"/>
+        <circle cx="20" cy="20" r="2.8" fill="#c8a84b"/>
+      </svg>
+      <div class="logo-text">
+        <span class="logo-en">Hadith Explorer</span>
+        <span class="logo-ar">مكتبة الحديث</span>
+      </div>
+    </a>
+
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle sidebar">☰</button>
+
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search hadiths…" autocomplete="off" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <select class="lang-pill" id="langSelect">
+      <option value="english">English</option>
+      <option value="urdu">Urdu</option>
+      <option value="arabic">Arabic</option>
+    </select>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter</div>
+      <div class="filter-row" id="filterRow">
+        <div class="tog-track" id="togTrack"><div class="tog-thumb"></div></div>
+        <span class="tog-label" id="togLabel">All Books</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Books</div>
+      <ul class="book-list" id="bookList"></ul>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Topics</div>
+      <ul class="topic-list" id="topicList">
+        <li class="topic-item" style="font-style:italic;color:var(--muted)">Select a book</li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="main-hdr">
+      <h1 class="main-title" id="mainTitle">Choose a topic</h1>
+      <span class="result-count hidden" id="resultCount"></span>
+      <button class="clear-btn hidden" id="clearBtn">✕ Clear search</button>
+    </div>
+    <div class="divider"></div>
+    <div class="cards-grid" id="cardsGrid">
+      <div class="state-msg">
+        <span class="big">بسم الله الرحمن الرحيم</span>
+        Select a book and topic, or search above.
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ─── Config ─────────────────────────────────────────────
+// Set to your FastAPI server URL when opening this file directly.
+// Example: const API_BASE = 'http://localhost:8000';
+// Leave empty when FastAPI serves this file.
+const API_BASE = '';
+
+// ─── State ──────────────────────────────────────────────
+const S = {
+  books: [], selectedBook: null, useFilter: false,
+  topics: [], selectedTopic: null, lang: 'english',
+  searchQuery: '', searchMode: false,
+};
+
+// ─── DOM refs ────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const bookList=$('bookList'), topicList=$('topicList'), cardsGrid=$('cardsGrid');
+const mainTitle=$('mainTitle'), resultCount=$('resultCount');
+const searchInput=$('searchInput'), searchBtn=$('searchBtn'), clearBtn=$('clearBtn');
+const langSelect=$('langSelect'), togTrack=$('togTrack'), togLabel=$('togLabel');
+const menuBtn=$('menuBtn'), sidebar=$('sidebar'), tip=$('tip');
+
+// ─── Helpers ─────────────────────────────────────────────
+async function fetchJSON(path) {
+  const res = await fetch(API_BASE + path);
+  if (!res.ok) { let m=`HTTP ${res.status}`; try{m+=': '+(await res.text()).slice(0,100);}catch(_){} throw new Error(m); }
+  return res.json();
+}
+const cap = s => s ? s[0].toUpperCase()+s.slice(1) : '';
+function gradeClass(g) {
+  const l=(g||'').toLowerCase();
+  if(l.includes('sahih')) return 'sahih';
+  if(l.includes('hasan')) return 'hasan';
+  if(l.includes('da')||l.includes('weak')||l.includes('munkar')) return 'daif';
+  return 'other';
+}
+function debounce(fn, ms=300){ let t; return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}; }
+
+// ─── Tooltip ─────────────────────────────────────────────
+let tipTimer=null;
+function showTip(card) {
+  clearTimeout(tipTimer);
+  const {pct,power,booksStr,chainHtml,gradeBars} = card.dataset;
+  tip.innerHTML = `
+    <div class="tip-heading">Isnād Weight</div>
+    <div class="chain">${chainHtml||''}</div>
+    <div class="bar-row">
+      <span class="bar-label">Overall</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct||0}%"></div></div>
+      <span class="bar-score">${power||'—'}</span>
+    </div>
+    ${gradeBars||''}
+    <div class="tip-src"><strong>Sources:</strong> ${booksStr||'—'}</div>`;
+
+  const cr=card.getBoundingClientRect(), tw=284, pad=10;
+  const th = Math.min(360, tip.scrollHeight+40);
+  const spB=window.innerHeight-cr.bottom-pad, spA=cr.top-pad;
+  const below = spB>=th || spB>=spA;
+  let top = below ? cr.bottom+10 : cr.top-th-10;
+  let left = cr.left+cr.width/2-tw/2;
+  left=Math.max(pad,Math.min(left,window.innerWidth-tw-pad));
+  top=Math.max(pad,top);
+  tip.style.left=left+'px'; tip.style.top=top+'px';
+  tip.className = below ? 'below' : 'above';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>tip.classList.add('show')));
+}
+function hideTip(delay=300){ clearTimeout(tipTimer); tipTimer=setTimeout(()=>tip.classList.remove('show'),delay); }
+tip.addEventListener('mouseenter',()=>clearTimeout(tipTimer));
+tip.addEventListener('mouseleave',()=>hideTip(200));
+window.addEventListener('scroll',()=>tip.classList.remove('show'),true);
+
+// ─── Render ──────────────────────────────────────────────
+function renderBookList(){
+  bookList.innerHTML=S.books.map(b=>`
+    <li class="book-item ${S.selectedBook===b?'active':''}" data-book="${b}">
+      <span class="book-dot"></span>${cap(b)}</li>`).join('');
+  bookList.querySelectorAll('.book-item').forEach(el=>el.addEventListener('click',()=>selectBook(el.dataset.book)));
+}
+
+function renderTopicList(){
+  if(!S.topics.length){topicList.innerHTML=`<li class="topic-item" style="font-style:italic;color:var(--muted)">No topics found</li>`;return;}
+  topicList.innerHTML=S.topics.map(t=>`
+    <li class="topic-item ${S.selectedTopic===t?'active':''}" data-topic="${t}">${t}</li>`).join('');
+  topicList.querySelectorAll('.topic-item').forEach(el=>el.addEventListener('click',()=>selectTopic(el.dataset.topic)));
+}
+
+function renderHadiths(hadiths, isSearch=false){
+  const entries=Object.entries(hadiths);
+  if(isSearch){mainTitle.textContent=`"${S.searchQuery}"`;clearBtn.classList.remove('hidden');}
+  else{mainTitle.textContent=S.selectedTopic||'Results';clearBtn.classList.add('hidden');}
+  if(entries.length){resultCount.textContent=`${entries.length} hadith${entries.length!==1?'s':''}`;resultCount.classList.remove('hidden');}
+  else resultCount.classList.add('hidden');
+  if(!entries.length){cardsGrid.innerHTML=`<div class="state-msg"><span class="big">—</span>No hadiths found.</div>`;return;}
+
+  const maxP=Math.max(...entries.map(([,h])=>h.power||1));
+  const totalBooks=7;
+
+  cardsGrid.innerHTML=entries.map(([id,h])=>{
+    const pct=Math.round(((h.power||0)/maxP)*100);
+    const books=Array.isArray(h.books)?h.books:[h.books].filter(Boolean);
+    const grades=h.grades||{};
+    const lit=books.length;
+
+    const pills=Object.entries(grades).map(([g])=>`<span class="grade-pill ${gradeClass(g)}">${g}</span>`).join('');
+
+    const chainHtml=Array.from({length:totalBooks},(_,i)=>{
+      const l=i<lit;
+      return(i>0?`<div class="chain-link ${l?'lit':''}"></div>`:'')+`<div class="chain-node ${l?'lit':''}"></div>`;
+    }).join('').replace(/"/g,'&quot;');
+
+    const gradeBars=Object.entries(grades).map(([g,info])=>{
+      const gp=Math.round(((info.power||0)/maxP)*100);
+      return `<div class="bar-row"><span class="bar-label">${g}</span><div class="bar-track"><div class="bar-fill" style="width:${gp}%"></div></div><span class="bar-score">${info.power??'—'}</span></div>`;
+    }).join('').replace(/"/g,'&quot;');
+
+    const booksStr=books.map(cap).join(', ')||'—';
+    const ctx=isSearch&&h.topic?`<div class="card-search-ctx">📖 ${cap(h.book||'')} · ${h.topic}</div>`:'';
+
+    return `<div class="hadith-card"
+      data-pct="${pct}" data-power="${h.power??''}"
+      data-books-str="${booksStr}"
+      data-chain-html="${chainHtml}"
+      data-grade-bars="${gradeBars}">
+      <div class="card-book">${booksStr}</div>
+      ${h.arabic?`<div class="card-arabic">${h.arabic}</div>`:''}
+      <div class="card-text">${h.text||id}</div>
+      <div class="card-footer">${pills}${ctx}</div>
+    </div>`;
+  }).join('');
+
+  cardsGrid.querySelectorAll('.hadith-card').forEach(c=>{
+    c.addEventListener('mouseenter',()=>showTip(c));
+    c.addEventListener('mouseleave',()=>hideTip(300));
+  });
+}
+
+function setLoading(){cardsGrid.innerHTML=`<div class="state-msg"><div class="spinner"></div>Loading…</div>`;resultCount.classList.add('hidden');}
+function renderError(msg){cardsGrid.innerHTML=`<div class="state-msg"><span class="big">⚠</span>${msg}</div>`;}
+
+// ─── Data ────────────────────────────────────────────────
+async function loadBooks(){
+  try{const d=await fetchJSON('/books');S.books=d.books||[];}
+  catch(e){console.error(e);S.books=['bukhari','muslim','malik','nasai','abudawud','tirmidhi','ibnmajah'];}
+  renderBookList();
+}
+async function loadTopics(){
+  const bp=(S.useFilter&&S.selectedBook)?S.selectedBook:(S.books[0]||'bukhari');
+  try{const d=await fetchJSON(`/topics/${S.useFilter}/${bp}`);S.topics=d.topics||[];}
+  catch(e){console.error(e);S.topics=[];}
+  renderTopicList();
+}
+async function loadHadiths(){
+  if(!S.selectedTopic)return;
+  S.searchMode=false; setLoading();
+  const bp=(S.useFilter&&S.selectedBook)?S.selectedBook:(S.books[0]||'bukhari');
+  try{const d=await fetchJSON(`/hadiths/${S.lang}/${encodeURIComponent(S.selectedTopic)}/${S.useFilter}/${bp}`);renderHadiths(d.hadiths||{},false);}
+  catch(e){renderError(e.message);}
+}
+async function doSearch(query){
+  const q=query.trim();
+  if(q.length<2){clearBtn.classList.add('hidden');if(S.selectedTopic)loadHadiths();else cardsGrid.innerHTML=`<div class="state-msg"><span class="big">—</span>Enter at least 2 characters.</div>`;return;}
+  S.searchMode=true; S.searchQuery=q; setLoading();
+  try{const d=await fetchJSON(`/search/${S.lang}/${encodeURIComponent(q)}`);renderHadiths(d.hadiths||{},true);}
+  catch(e){renderError(e.message);}
+}
+
+// ─── Transitions ─────────────────────────────────────────
+function selectBook(book){
+  S.selectedBook=book; S.selectedTopic=null; S.searchMode=false;
+  searchInput.value=''; clearBtn.classList.add('hidden'); resultCount.classList.add('hidden');
+  renderBookList(); loadTopics();
+  mainTitle.textContent=cap(book);
+  cardsGrid.innerHTML=`<div class="state-msg"><span class="big">—</span>Select a topic.</div>`;
+  if(window.innerWidth<=860)sidebar.classList.remove('open');
+}
+function selectTopic(topic){
+  S.selectedTopic=topic; S.searchMode=false;
+  searchInput.value=''; clearBtn.classList.add('hidden');
+  document.querySelectorAll('.topic-item').forEach(el=>el.classList.toggle('active',el.dataset.topic===topic));
+  loadHadiths();
+  if(window.innerWidth<=860)sidebar.classList.remove('open');
+}
+
+// ─── Controls ────────────────────────────────────────────
+function bindControls(){
+  togTrack.addEventListener('click',()=>{
+    S.useFilter=!S.useFilter;
+    togTrack.classList.toggle('on',S.useFilter);
+    togLabel.textContent=S.useFilter?'This Book':'All Books';
+    loadTopics(); if(S.selectedTopic)loadHadiths();
+  });
+  langSelect.addEventListener('change',e=>{S.lang=e.target.value;if(S.searchMode&&S.searchQuery)doSearch(S.searchQuery);else if(S.selectedTopic)loadHadiths();});
+  searchBtn.addEventListener('click',()=>doSearch(searchInput.value));
+  searchInput.addEventListener('keyup',e=>{if(e.key==='Enter')doSearch(searchInput.value);});
+  searchInput.addEventListener('input',debounce(()=>doSearch(searchInput.value),420));
+  clearBtn.addEventListener('click',()=>{
+    searchInput.value=''; clearBtn.classList.add('hidden'); S.searchMode=false;
+    if(S.selectedTopic)loadHadiths();
+    else{mainTitle.textContent='Choose a topic';resultCount.classList.add('hidden');cardsGrid.innerHTML=`<div class="state-msg"><span class="big">—</span>Select a topic.</div>`;}
+  });
+  menuBtn.addEventListener('click',()=>sidebar.classList.toggle('open'));
+  document.addEventListener('click',e=>{
+    if(window.innerWidth<=860&&sidebar.classList.contains('open')&&!sidebar.contains(e.target)&&!menuBtn.contains(e.target))
+      sidebar.classList.remove('open');
+  });
+}
+
+async function init(){ await loadBooks(); if(S.books.length)selectBook(S.books[0]); bindControls(); }
+init();
+</script>
+</body>
+</html>

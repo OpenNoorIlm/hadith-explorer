@@ -1,0 +1,14 @@
+hadiths.db 
+books/ 
+__pycache__/ 
+*.pyc 
+.env 
+venv/ 
+.vscode/ 
+frontend/ 
+helpers/ 
+clean.py 
+dataset.py 
+head.py 
+help.md 
+migrate.py 
